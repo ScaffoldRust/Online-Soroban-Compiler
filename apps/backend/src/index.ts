@@ -1,7 +1,8 @@
-import express from 'express';
+import express, { type Request, type Response, type NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import { setupProject, getSanitizedDirName, createRustProject } from './utils/fileManager';
+import compilerController from './controllers/compilerController';
 
 const app = express();
 
@@ -45,6 +46,9 @@ app.get('/', (_, res) =>
   res.send('Hello from Backend!' + '<br>' + 'The best online soroban compiler is coming...')
 );
 
+// Mount compiler controller at /api
+app.use('/api', compilerController);
+
 // Test endpoint for fileManager functionality
 app.post('/api/test-filemanager', async (req, res) => {
   try {
@@ -83,7 +87,7 @@ app.post('/api/test-filemanager', async (req, res) => {
 });
 
 // Error handling middleware
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   res.status(500).json({
     error: 'Internal Server Error',
     message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',

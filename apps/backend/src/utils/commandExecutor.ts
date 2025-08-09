@@ -2,16 +2,24 @@ import { spawn, type SpawnOptionsWithoutStdio } from 'child_process';
 
 const DEFAULT_TIMEOUT = 30000;
 
+interface CommandError extends Error {
+  stderr: string;
+  stdout: string;
+  code: number | null;
+}
+
 /**
  * Executes a shell command securely with a timeout
  * @param command The command to execute
  * @param timeout Maximum execution time in milliseconds (default: 30000)
+ * @param cwd Working directory to execute the command in (optional)
  * @returns Promise that resolves with the command output
  * @throws Error with stderr content if command fails or times out
  */
 export async function executeCommand(
   command: string,
-  timeout: number = DEFAULT_TIMEOUT
+  timeout: number = DEFAULT_TIMEOUT,
+  cwd?: string
 ): Promise<string> {
   // Validate inputs
   if (typeof command !== 'string' || command.trim() === '') {
@@ -25,6 +33,7 @@ export async function executeCommand(
   const options: SpawnOptionsWithoutStdio = {
     shell: '/bin/bash',
     env: { ...process.env },
+    ...(cwd && { cwd }),
   };
 
   return new Promise((resolve, reject) => {
@@ -56,10 +65,12 @@ export async function executeCommand(
       if (code === 0) {
         resolve(stdout.trim());
       } else {
-        const error = new Error(stderr.trim() || `Command failed with exit code ${code}`);
-        (error as any).stderr = stderr.trim();
-        (error as any).stdout = stdout.trim();
-        (error as any).code = code;
+        const error = new Error(
+          stderr.trim() || `Command failed with exit code ${code}`
+        ) as CommandError;
+        error.stderr = stderr.trim();
+        error.stdout = stdout.trim();
+        error.code = code;
         reject(error);
       }
     });
