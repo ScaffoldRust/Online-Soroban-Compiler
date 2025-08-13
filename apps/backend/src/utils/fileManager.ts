@@ -5,62 +5,56 @@ import { randomBytes } from 'node:crypto';
 import sanitizeFilename from 'sanitize-filename';
 
 /**
- * Configuration interface for project setup
+ * Interface for project setup configuration
  */
-export interface ProjectSetup {
-  /** Absolute path to the temporary directory */
-  tempDir: string;
-  /** Function to clean up the temporary directory */
+export interface ProjectConfig {
+  /** The Rust source code */
+  code: string;
+  /** Optional project name (will be sanitized) */
+  projectName?: string;
+  /** Optional dependencies to add to Cargo.toml */
+  dependencies?: Record<string, string>;
+}
+
+/**
+ * Interface for created project information
+ */
+export interface ProjectInfo {
+  /** Path to the project directory */
+  projectPath: string;
+  /** Path to the source file (lib.rs) */
+  sourcePath: string;
+  /** Path to Cargo.toml */
+  cargoPath: string;
+  /** Cleanup function to remove the project */
   cleanup: () => Promise<void>;
 }
 
 /**
- * Options for project setup
- */
-export interface ProjectSetupOptions {
-  /** Base name for the project directory (will be sanitized) */
-  baseName?: string;
-  /** Custom temporary directory root (defaults to OS temp dir) */
-  tempRoot?: string;
-  /** Custom Rust code for the contract */
-  rustCode?: string;
-}
-
-/**
- * Default Rust contract template
- * This is a simple Soroban contract that greets a user by name.
- * It can be customized by passing a different `rustCode` in the options.
- */
-const DEFAULT_RUST_CODE = `#![no_std]
-use soroban_sdk::{contractimpl, Env};
-
-pub struct Contract;
-
-#[contractimpl]
-impl Contract {
-    pub fn hello(env: Env, name: String) -> String {
-        format!("Hello, {}!", name)
-    }
-}`;
-
-/**
- * Default Cargo.toml template for Soroban contracts
+ * Default Cargo.toml template for Soroban projects
  */
 const DEFAULT_CARGO_TOML = `[package]
-name = "temp-contract"
+name = "soroban-contract"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "temp_project"
+name = "soroban-contract"
 path = "src/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-soroban-sdk = "21.2.0"
+soroban-sdk = "22.0.0"
 
-[dev-dependencies]
-soroban-sdk = { version = "21.2.0", features = ["testutils"] }
+[dev_dependencies]
+soroban-sdk = { version = "22.0.0", features = ["testutils"] }
+
+[features]
+testutils = ["soroban-sdk/testutils"]
+
+[[bin]]
+name = "soroban-contract"
+path = "src/bin/soroban-contract.rs"
 
 [profile.release]
 opt-level = "z"
@@ -74,132 +68,148 @@ lto = true
 
 [profile.release-with-logs]
 inherits = "release"
-debug-assertions = true
-`;
+debug-assertions = true`;
 
 /**
- * Sanitizes a directory name to prevent path traversal and ensure cross-platform compatibility
+ * File manager utility for handling temporary Rust projects
  */
-export function getSanitizedDirName(baseName: string): string {
-  if (!baseName || typeof baseName !== 'string') {
-    return '';
+export class FileManager {
+  private static activeProjects = new Set<string>();
+
+  /**
+   * Creates a temporary Rust project with the provided code
+   *
+   * @param config - Project configuration
+   * @returns Promise that resolves to project information
+   */
+  static async createProject(config: ProjectConfig): Promise<ProjectInfo> {
+    const { code, projectName = 'soroban-contract', dependencies = {} } = config;
+
+    // Sanitize the project name
+    const safeName = sanitizeFilename(projectName) || 'soroban-contract';
+
+    // Create unique temporary directory with improved randomness
+    const timestamp = Date.now();
+    const randomId = randomBytes(8).toString('hex');
+    const projectDirName = `${safeName}-${timestamp}-${randomId}`;
+
+    const projectPath = join(tmpdir(), projectDirName);
+    const sourcePath = join(projectPath, 'src', 'lib.rs');
+    const cargoPath = join(projectPath, 'Cargo.toml');
+
+    try {
+      // Create project directory structure
+      await fs.mkdir(projectPath, { recursive: true });
+      await fs.mkdir(join(projectPath, 'src'), { recursive: true });
+
+      // Generate Cargo.toml with any additional dependencies
+      let cargoToml = DEFAULT_CARGO_TOML;
+      if (Object.keys(dependencies).length > 0) {
+        const depsSection = Object.entries(dependencies)
+          .map(([name, version]) => `${name} = "${version}"`)
+          .join('\n');
+        cargoToml = cargoToml.replace('[dependencies]', `[dependencies]\n${depsSection}`);
+      }
+
+      // Write Cargo.toml
+      await fs.writeFile(cargoPath, cargoToml, 'utf8');
+
+      // Write source code
+      await fs.writeFile(sourcePath, code, 'utf8');
+
+      // Track active project
+      this.activeProjects.add(projectPath);
+
+      // Create cleanup function
+      const cleanup = async () => {
+        await this.cleanupProject(projectPath);
+      };
+
+      return {
+        projectPath,
+        sourcePath,
+        cargoPath,
+        cleanup,
+      };
+    } catch (error) {
+      // Clean up on error
+      try {
+        await this.cleanupProject(projectPath);
+      } catch {
+        // Ignore cleanup errors during error handling
+      }
+      throw error;
+    }
   }
 
-  const trimmed = baseName.trim();
-  if (!trimmed) {
-    return '';
-  }
-
-  let sanitized = sanitizeFilename(trimmed, { replacement: '_' });
-  sanitized = sanitized.replace(/\.\./g, '').replace(/^[._]+/, '');
-
-  if (sanitized.length > 50) {
-    sanitized = sanitized.substring(0, 50);
-  }
-
-  return sanitized || 'project';
-}
-
-/**
- * Creates a unique, sanitized temporary directory for Rust project compilation
- */
-export async function setupProject(options: ProjectSetupOptions = {}): Promise<ProjectSetup> {
-  const { baseName = 'project', tempRoot = tmpdir(), rustCode = DEFAULT_RUST_CODE } = options;
-
-  // Create a unique identifier to prevent collisions
-  const timestamp = Date.now();
-  const randomId = randomBytes(8).toString('hex');
-
-  // Sanitize the base name
-  const sanitizedBase = getSanitizedDirName(baseName);
-  const finalBaseName = sanitizedBase || 'project';
-  const dirName = `${finalBaseName}_${timestamp}_${randomId}`;
-  const tempDir = join(tempRoot, dirName);
-
-  try {
-    // Create the temporary directory
-    await fs.mkdir(tempDir, { recursive: true });
-
-    // Verify the directory was created and is accessible
-    const stats = await fs.stat(tempDir);
-    if (!stats.isDirectory()) {
-      throw new Error(`Created path is not a directory: ${tempDir}`);
+  /**
+   * Cleans up a temporary project directory
+   *
+   * @param projectPath - Path to the project directory
+   */
+  static async cleanupProject(projectPath: string): Promise<void> {
+    if (this.activeProjects.has(projectPath)) {
+      this.activeProjects.delete(projectPath);
     }
 
-    // Create the Rust project structure
-    await createRustProject(tempDir, rustCode);
-
-    return {
-      tempDir,
-      cleanup: () => cleanupProject(tempDir),
-    };
-  } catch (error) {
-    throw new Error(
-      `Failed to create temporary directory: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
-  }
-}
-
-/**
- * Safely removes a temporary project directory and all its contents
- */
-export async function cleanupProject(tempDir: string): Promise<void> {
-  if (!tempDir || typeof tempDir !== 'string') {
-    throw new Error('Invalid tempDir provided for cleanup');
-  }
-
-  // Basic safety check: ensure we're only cleaning temp directories
-  const systemTempDir = tmpdir();
-  if (!tempDir.startsWith(systemTempDir)) {
-    throw new Error(`Refusing to clean directory outside temp folder: ${tempDir}`);
-  }
-
-  try {
-    // Check if directory exists before attempting to remove
-    const stats = await fs.stat(tempDir).catch(() => null);
-    if (!stats) {
-      return;
+    // Check if directory exists before trying to remove it
+    try {
+      await fs.access(projectPath);
+      await fs.rm(projectPath, { recursive: true, force: true });
+    } catch (error) {
+      // Directory might not exist, which is fine
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw error;
+      }
     }
+  }
 
-    if (!stats.isDirectory()) {
-      throw new Error(`Path is not a directory: ${tempDir}`);
+  /**
+   * Cleans up all active projects (useful for shutdown)
+   */
+  static async cleanupAllProjects(): Promise<void> {
+    const cleanupPromises = Array.from(this.activeProjects).map((projectPath) =>
+      this.cleanupProject(projectPath).catch(() => {
+        // Ignore cleanup errors during bulk cleanup
+      })
+    );
+
+    await Promise.all(cleanupPromises);
+    this.activeProjects.clear();
+  }
+
+  /**
+   * Gets the list of active project paths
+   */
+  static getActiveProjects(): string[] {
+    return Array.from(this.activeProjects);
+  }
+
+  /**
+   * Reads the contents of a file within a project
+   *
+   * @param filePath - Path to the file
+   * @returns Promise that resolves to file contents
+   */
+  static async readFile(filePath: string): Promise<string> {
+    try {
+      return await fs.readFile(filePath, 'utf8');
+    } catch (error) {
+      throw new Error(`Failed to read file ${filePath}: ${(error as Error).message}`);
     }
-
-    await fs.rm(tempDir, { recursive: true, force: true });
-  } catch (error) {
-    throw new Error(
-      `Failed to cleanup directory ${tempDir}: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
-  }
-}
-
-/**
- * Creates a basic Rust project structure with Cargo.toml and lib.rs
- */
-export async function createRustProject(tempDir: string, rustCode: string): Promise<void> {
-  if (!tempDir || typeof tempDir !== 'string') {
-    throw new Error('Invalid tempDir provided');
   }
 
-  if (!rustCode || typeof rustCode !== 'string') {
-    throw new Error('Invalid rustCode provided');
-  }
-
-  try {
-    // Create Cargo.toml for Soroban contract
-
-    // Create src directory
-    const srcDir = join(tempDir, 'src');
-    await fs.mkdir(srcDir, { recursive: true });
-
-    // Write Cargo.toml
-    await fs.writeFile(join(tempDir, 'Cargo.toml'), DEFAULT_CARGO_TOML, 'utf8');
-
-    // Write lib.rs
-    await fs.writeFile(join(srcDir, 'lib.rs'), rustCode, 'utf8');
-  } catch (error) {
-    throw new Error(
-      `Failed to create Rust project structure: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
+  /**
+   * Writes content to a file within a project
+   *
+   * @param filePath - Path to the file
+   * @param content - Content to write
+   */
+  static async writeFile(filePath: string, content: string): Promise<void> {
+    try {
+      await fs.writeFile(filePath, content, 'utf8');
+    } catch (error) {
+      throw new Error(`Failed to write file ${filePath}: ${(error as Error).message}`);
+    }
   }
 }

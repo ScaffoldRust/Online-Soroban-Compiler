@@ -1,8 +1,7 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
-import { setupProject, getSanitizedDirName, createRustProject } from './utils/fileManager';
-import compilerController from './controllers/compilerController';
+import { FileManager } from './utils/fileManager';
 
 const app = express();
 
@@ -46,31 +45,26 @@ app.get('/', (_, res) =>
   res.send('Hello from Backend!' + '<br>' + 'The best online soroban compiler is coming...')
 );
 
-// Mount compiler controller at /api
-app.use('/api', compilerController);
-
 // Test endpoint for fileManager functionality
 app.post('/api/test-filemanager', async (req, res) => {
   try {
     const {
-      baseName = 'test-project',
-      rustCode = 'pub fn hello() -> &\'static str { "Hello, Soroban!" }',
+      projectName = 'test-project',
+      code = 'pub fn hello() -> &\'static str { "Hello, Soroban!" }',
     } = req.body;
 
-    // Test sanitization
-    const sanitized = getSanitizedDirName(baseName);
-
-    // Test project setup
-    const project = await setupProject({ baseName });
-
-    // Test Rust project creation
-    await createRustProject(project.tempDir, rustCode);
+    // Test project creation using FileManager class
+    const project = await FileManager.createProject({
+      code,
+      projectName,
+    });
 
     // Success response
     const response = {
       success: true,
-      sanitizedName: sanitized,
-      tempDir: project.tempDir,
+      projectPath: project.projectPath,
+      sourcePath: project.sourcePath,
+      cargoPath: project.cargoPath,
       message: 'FileManager test completed successfully - Rust project created and cleaned up',
     };
 
