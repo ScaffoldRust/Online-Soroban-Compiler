@@ -12,7 +12,9 @@
         "@angular/platform-server": "^20.1.0",
         "@angular/router": "^20.1.0",
         "@angular/ssr": "^20.1.4",
+        "@materia-ui/ngx-monaco-editor": "^6.0.0",
         "express": "^5.1.0",
+        "monaco-editor": "^0.52.2",
         "rxjs": "~7.8.0",
         "tslib": "^2.3.0",
       },
@@ -283,6 +285,8 @@
     "@lmdb/lmdb-win32-arm64": ["@lmdb/lmdb-win32-arm64@3.4.1", "", { "os": "win32", "cpu": "arm64" }, "sha512-4h8tm3i1ODf+28UyqQZLP7c2jmRM26AyEEyYp994B4GiBdGvGAsYUu3oiHANYK9xFpvLuFzyGeqFm1kdNC0D1A=="],
 
     "@lmdb/lmdb-win32-x64": ["@lmdb/lmdb-win32-x64@3.4.1", "", { "os": "win32", "cpu": "x64" }, "sha512-HqqKIhTbq6piJhkJpTTf3w1m/CgrmwXRAL9R9j7Ru5xdZSeO7Mg4AWiBC9B00uXR+LvVZKtUyRMVZfhmIZztmQ=="],
+
+    "@materia-ui/ngx-monaco-editor": ["@materia-ui/ngx-monaco-editor@6.0.0", "", { "dependencies": { "tslib": "^2.0.0" }, "peerDependencies": { "@angular/core": ">=13.0.0", "rxjs": ">=6.0.0" } }, "sha512-gTqNQjOGznZxOC0NlmKdKSGCJuTts8YmK4dsTQAGc5IgIV7cZdQWiW6AL742h0ruED6q0cAunEYjXT6jzHBoIQ=="],
 
     "@modelcontextprotocol/sdk": ["@modelcontextprotocol/sdk@1.13.3", "", { "dependencies": { "ajv": "^6.12.6", "content-type": "^1.0.5", "cors": "^2.8.5", "cross-spawn": "^7.0.5", "eventsource": "^3.0.2", "eventsource-parser": "^3.0.0", "express": "^5.0.1", "express-rate-limit": "^7.5.0", "pkce-challenge": "^5.0.0", "raw-body": "^3.0.0", "zod": "^3.23.8", "zod-to-json-schema": "^3.24.1" } }, "sha512-bGwA78F/U5G2jrnsdRkPY3IwIwZeWUEfb5o764b79lb0rJmMT76TLwKhdNZOWakOQtedYefwIR4emisEMvInKA=="],
 
@@ -1085,6 +1089,8 @@
     "minizlib": ["minizlib@3.0.2", "", { "dependencies": { "minipass": "^7.1.2" } }, "sha512-oG62iEk+CYt5Xj2YqI5Xi9xWUeZhDI8jjQmC5oThVH5JGCTgIjr7ciJDzC7MBzYd//WvR1OTmP5Q38Q8ShQtVA=="],
 
     "mkdirp": ["mkdirp@0.5.6", "", { "dependencies": { "minimist": "^1.2.6" }, "bin": "bin/cmd.js" }, "sha512-FP+p8RB8OWpF3YZBCrP5gtADmtXApB5AMLn+vdyA+PyxCjrCs00mjyUozssO33cwDeT3wNGdLxJ5M//YqtHAJw=="],
+
+    "monaco-editor": ["monaco-editor@0.52.2", "", {}, "sha512-GEQWEZmfkOGLdd3XK8ryrfWz3AIP8YymVXiPHEdewrUq7mh0qrKrfHLNCXcbB6sTnMLnOZ3ztSiKcciFUkIJwQ=="],
 
     "mrmime": ["mrmime@2.0.1", "", {}, "sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ=="],
 

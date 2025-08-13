@@ -186,9 +186,22 @@
   <div class="content">
     <div class="left-side">
       <img src="Scaffold-Rust-Logo.jpg" alt="" width="30">
-      <h1>Hello, awesome developer!</h1>
-      <p>Congratulations! Your app is running. 🎉</p>
-      <p>We are very excited that you are contributing to this great project. This is just the Angular template, so everything needs to be modified. [including this text]</p>
+      <h1>Online Soroban Compiler</h1>
+      <p>Write and test your Stellar smart contracts! 🚀</p>
+      <p>Use the Monaco Editor below to write Rust smart contracts for the Stellar blockchain using the Soroban SDK.</p>
+      
+      <!-- Monaco Editor -->
+      <div class="editor-container">
+        <h3>Rust Smart Contract Editor</h3>
+        <app-monaco-editor
+          [language]="'rust'"
+          [theme]="'vs-dark'"
+          [height]="'500px'"
+          [options]="{ minimap: { enabled: false } }"
+          [(ngModel)]="rustCode"
+          (ngModelChange)="onEditorChange($event)">
+        </app-monaco-editor>
+      </div>
     </div>
     <div class="divider" role="separator" aria-label="Divider"></div>
     <div class="right-side">
