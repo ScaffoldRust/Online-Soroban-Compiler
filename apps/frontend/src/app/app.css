@@ -1,29 +1,20 @@
-.editor-container {
-  margin-top: 2rem;
-  width: 100%;
-  max-width: 800px;
+/* App-specific utilities - using Tailwind apply directive for complex styles */
+
+/* App container styles */
+.app-container {
+  @apply h-full min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800;
 }
 
-.editor-container h3 {
-  color: var(--gray-900);
-  margin-bottom: 1rem;
-  font-size: 1.5rem;
-  font-weight: 500;
+.editor-layout {
+  @apply max-w-7xl mx-auto w-full h-full flex flex-col;
 }
 
-.content {
-  flex-direction: column !important;
-  max-width: 1200px !important;
-  align-items: flex-start !important;
+/* Custom focus styles for better accessibility */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900;
 }
 
-.left-side {
-  width: 100% !important;
-  max-width: none !important;
-}
-
-@media screen and (max-width: 650px) {
-  .editor-container {
-    width: 100%;
-  }
+/* Smooth transitions for interactive elements */
+.transition-smooth {
+  @apply transition-all duration-200 ease-in-out;
 }
