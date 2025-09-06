@@ -3,6 +3,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MonacoEditorModule } from '@materia-ui/ngx-monaco-editor';
 import { PLATFORM_ID, inject } from '@angular/core';
+import { CompilerService } from '../../services/compiler';
 
 
 const DEFAULT_RUST_CODE = `// Welcome to Soroban Smart Contract Editor
@@ -34,6 +35,8 @@ export class EditorComponent implements OnDestroy {
   isLoading = false;
   isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   
+  private compilerService = inject(CompilerService);
+  
   editorOptions = {
     theme: 'vs-dark',
     language: 'rust',
@@ -50,6 +53,7 @@ export class EditorComponent implements OnDestroy {
     this.timeoutIds.clear();
   }
 
+
   onCompile(): void {
     if (this.isLoading || !this.code.trim()) {
       return;
@@ -58,13 +62,16 @@ export class EditorComponent implements OnDestroy {
     this.isLoading = true;
     console.log('Compiling Rust smart contract code:', this.code);
     
-    // TODO: Implement API call to backend compiler
-    const timeoutId = setTimeout(() => {
-      this.isLoading = false;
-      this.timeoutIds.delete(timeoutId);
-      console.log('Compilation complete');
-    }, 2000) as unknown as number;
-    this.timeoutIds.add(timeoutId);
+    this.compilerService.compile(this.code).subscribe({
+      next: (response) => {
+        this.isLoading = false;
+        console.log('Compilation response:', response);
+      },
+      error: (error) => {
+        this.isLoading = false;
+        console.error('Compilation error:', error);
+      }
+    });
   }
 
   onTest(): void {
@@ -75,12 +82,15 @@ export class EditorComponent implements OnDestroy {
     this.isLoading = true;
     console.log('Testing Rust smart contract code:', this.code);
     
-    // TODO: Implement API call to backend test runner  
-    const timeoutId = setTimeout(() => {
-      this.isLoading = false;
-      this.timeoutIds.delete(timeoutId);
-      console.log('Testing complete');
-    }, 2000) as unknown as number;
-    this.timeoutIds.add(timeoutId);
+    this.compilerService.test(this.code).subscribe({
+      next: (response) => {
+        this.isLoading = false;
+        console.log('Test response:', response);
+      },
+      error: (error) => {
+        this.isLoading = false;
+        console.error('Test error:', error);
+      }
+    });
   }
 }
