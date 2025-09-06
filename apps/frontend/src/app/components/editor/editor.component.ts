@@ -34,6 +34,11 @@ export class EditorComponent implements OnDestroy {
   isLoading = false;
   isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   
+  // Validation and output properties
+  errorMessage: string = '';
+  outputMessage: string = '';
+  outputType: 'error' | 'success' | 'info' = 'info';
+  
   editorOptions = {
     theme: 'vs-dark',
     language: 'rust',
@@ -50,35 +55,97 @@ export class EditorComponent implements OnDestroy {
     this.timeoutIds.clear();
   }
 
+  private validateCode(): boolean {
+    // Clear previous messages
+    this.clearOutput();
+    
+    // Check if code is empty or only whitespace
+    if (!this.code || !this.code.trim()) {
+      this.errorMessage = 'Error: Code cannot be empty or contain only whitespace';
+      this.outputType = 'error';
+      return false;
+    }
+    
+    // Check code length (50KB limit)
+    if (this.code.length > 50000) {
+      this.errorMessage = 'Error: Code exceeds maximum length (50KB). Please reduce code size.';
+      this.outputType = 'error';
+      return false;
+    }
+    
+    // Basic Rust syntax check - look for common Rust keywords
+    const rustKeywords = ['fn', 'impl', 'pub', 'struct', 'enum', 'mod', 'use', 'let', 'const', 'static'];
+    const hasRustKeyword = rustKeywords.some(keyword => this.code.includes(keyword));
+    
+    if (!hasRustKeyword && this.code.trim().length > 10) {
+      this.errorMessage = 'Warning: Code may not be valid Rust. Please ensure you\'re writing Rust code.';
+      this.outputType = 'error';
+      return false;
+    }
+    
+    // Check for basic contract structure for Soroban
+    if (!this.code.includes('contract') && !this.code.includes('soroban')) {
+      this.errorMessage = 'Info: Consider using Soroban contract structure for smart contract development.';
+      this.outputType = 'info';
+      // This is just a warning, still allow compilation
+    }
+    
+    return true;
+  }
+
+  clearOutput(): void {
+    this.errorMessage = '';
+    this.outputMessage = '';
+    this.outputType = 'info';
+  }
+
   onCompile(): void {
-    if (this.isLoading || !this.code.trim()) {
+    if (this.isLoading) {
+      return;
+    }
+    
+    // Validate code before proceeding
+    if (!this.validateCode()) {
       return;
     }
     
     this.isLoading = true;
+    this.outputMessage = 'Compiling Rust smart contract...';
+    this.outputType = 'info';
     console.log('Compiling Rust smart contract code:', this.code);
     
     // TODO: Implement API call to backend compiler
     const timeoutId = setTimeout(() => {
       this.isLoading = false;
       this.timeoutIds.delete(timeoutId);
+      this.outputMessage = 'Compilation completed successfully!';
+      this.outputType = 'success';
       console.log('Compilation complete');
     }, 2000) as unknown as number;
     this.timeoutIds.add(timeoutId);
   }
 
   onTest(): void {
-    if (this.isLoading || !this.code.trim()) {
+    if (this.isLoading) {
+      return;
+    }
+    
+    // Validate code before proceeding
+    if (!this.validateCode()) {
       return;
     }
     
     this.isLoading = true;
+    this.outputMessage = 'Running tests for smart contract...';
+    this.outputType = 'info';
     console.log('Testing Rust smart contract code:', this.code);
     
     // TODO: Implement API call to backend test runner  
     const timeoutId = setTimeout(() => {
       this.isLoading = false;
       this.timeoutIds.delete(timeoutId);
+      this.outputMessage = 'All tests passed successfully!';
+      this.outputType = 'success';
       console.log('Testing complete');
     }, 2000) as unknown as number;
     this.timeoutIds.add(timeoutId);

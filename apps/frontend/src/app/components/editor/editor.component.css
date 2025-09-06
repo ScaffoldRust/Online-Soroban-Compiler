@@ -1,4 +1,13 @@
-/* Monaco Editor Deep Styling */
+/* Editor Container Styles */
+.editor-container {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Monaco Editor Custom Styles */
+:host ::ng-deep .monaco-editor {
+  padding-top: 0px;
+}
+
 :host ::ng-deep .monaco-editor .margin {
   background-color: #1f2937;
 }
@@ -62,6 +71,29 @@
 /* Focus ring for accessibility */
 .focus-ring-editor {
   @apply focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-900 rounded-lg;
+}
+
+/* Editor Footer */
+.editor-footer {
+  backdrop-filter: blur(10px);
+  background-color: rgba(31, 41, 55, 0.95);
+}
+
+/* Output panel animations */
+.animate-slide-down {
+  animation: slide-in-from-top 0.3s ease-out;
+}
+
+/* Custom animations for smooth transitions */
+@keyframes slide-in-from-top {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Code syntax highlighting enhancements */
